@@ -12,6 +12,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Encoder editor: a module encoder shows which module drives it, with a button to open it.
 - `test/device/probe.oxie16`: test scene that shows which Lua events and functions arrive on the E16.
 
+### Documentation
+
+- Linux MIDI buffer: README and help explain the steps in a safe order (store the setting, load the module or set the value, check it) and what "No such file or directory" means.
+
 ## [1.3.1] - 2026-11-13
 
 ### Added

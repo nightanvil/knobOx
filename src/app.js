@@ -468,7 +468,8 @@
    */
   const ALSA_BUFFER_HINT = 'Linux: the kernel\'s MIDI output buffer (4 KB by default) is too small for the 9 KB script block, so the block arrived incomplete. '
     + 'Increase it, then reload this page: sudo sh -c "echo 32768 > /sys/module/snd_seq_midi/parameters/output_buffer_size". '
-    + 'To keep it after a reboot: echo "options snd-seq-midi output_buffer_size=32768" | sudo tee /etc/modprobe.d/snd-seq-midi.conf';
+    + 'To keep it after a reboot: echo "options snd-seq-midi output_buffer_size=32768" | sudo tee /etc/modprobe.d/snd-seq-midi.conf. '
+    + 'Step by step: help (?), "Sending to the E16 fails on Linux".';
   /* The scene arrived and was verified, only the (empty) script block got no reply. */
   function scriptBlockNote() {
     return 'Checked by reading it back: settings and all pages arrived. Only the empty script block was not confirmed'
