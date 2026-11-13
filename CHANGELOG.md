@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- Modules tab (side panel): ready-made script functions for the E16, set up with a form instead of Lua code. knobOx writes the scene's script, wires the encoders and shows the script size (limit 8000 bytes). Every change is one undo step; module encoders follow when Pages are swapped or encoders moved. The configuration is kept in the scene file, so a saved scene opens with its modules again. A scene with its own script is only replaced after a confirmation.
+- First module, "Shift layer": turning sends CC A, turning while the encoder is pushed sends CC B, each with its own value and an optional label while pushed. Needs Lua API 1.3.
+- Encoder editor: a module encoder shows which module drives it, with a button to open it.
+- `test/device/probe.oxie16`: test scene that shows which Lua events and functions arrive on the E16.
+
 ## [1.3.1] - 2026-11-13
 
 ### Added

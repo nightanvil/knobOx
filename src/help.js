@@ -151,6 +151,28 @@
 <p>Copies the current Page onto a target Page or swaps them. "With settings" includes name, channel and output. <b>Nav on swap</b>: "Move with page" keeps Navigation pushes working after a swap; "Stay in place" keeps them at their position, e.g. for a navigation layout that is the same on every Page.</p>`,
     },
     {
+      id: 'modules', title: 'Modules tab',
+      html: `
+<p>Modules are ready-made functions for the E16 that the device cannot do on its own. You set them up with a form, knobOx writes the Lua script for the scene and wires the encoders. No programming needed.</p>
+<ol>
+  <li>Click an encoder in the grid.</li>
+  <li>In the <b>Modules</b> tab choose a module and click <b>Add</b>.</li>
+  <li>Set CCs, values and labels. Every change rewrites the script at once (Undo works as usual).</li>
+  <li>Save the scene or send it to the E16.</li>
+</ol>
+<h3>Shift layer</h3>
+<p>Turning sends CC A. Turning while the encoder is pushed down sends CC B. Each layer keeps its own value, the ring shows the layer that is active. Label B, if set, is shown on the display while the encoder is pushed. The module uses the encoder's push, Dest 2 is switched Off.</p>
+<h3>Good to know</h3>
+<ul>
+  <li>Modules need firmware with Lua API 1.3 (push and release events).</li>
+  <li>Moving a module encoder (drag and drop, swapping Pages) moves the module with it.</li>
+  <li><b>Script</b> at the top shows the script size. The E16 accepts up to 8000 bytes.</li>
+  <li>A scene with its own script (e.g. from the OXI App) is replaced when you add a module. knobOx asks first.</li>
+  <li>The encoder settings of a module encoder are written by the module; change them in the Modules tab.</li>
+  <li>CCs sent by modules are not shown in the CC overview yet.</li>
+</ul>`,
+    },
+    {
       id: 'overview', title: 'CC overview',
       html: `
 <p>The tab <b>CC overview</b> shows all 16 MIDI channels × 128 CCs of the whole scene at once.</p>

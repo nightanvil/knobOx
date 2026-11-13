@@ -70,6 +70,7 @@ src/app.js          UI
 src/model.js        scene model and editing operations
 src/sysex.js        SysEx transfer over Web MIDI
 src/library.js      scene folder (File System Access API)
+src/modules.js      script modules: form-based Lua functions, script generator
 src/help.js         built-in help
 docs/               protocol and file format
 test/               browser tests with USB capture fixtures

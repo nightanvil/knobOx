@@ -427,3 +427,8 @@ body.noscroll { overflow: hidden; }
   .helpbody { padding: 4px 16px 40vh; }
   .helpsec td:first-child { white-space: normal; }
 }
+
+/* Modules tab */
+.modbar { height: 4px; border-radius: 2px; background: var(--panel2); overflow: hidden; margin-bottom: var(--row-gap); }
+.modbar > span { display: block; height: 100%; background: var(--accent); }
+.modnote { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 8px; }

@@ -183,6 +183,7 @@
   function commit(fn, msg) {
     const before = JSON.stringify(S.scene);
     const res = fn();
+    syncModules();
     const after = JSON.stringify(S.scene);
     if (before !== after) {
       S.undo.push(before);
@@ -496,6 +497,7 @@
   }
   const L = () => window.E16Library;
   const X = () => window.E16Sysex;
+  const MOD = () => window.E16Modules;
 
   async function initFolder() {
     if (!L().supported()) return;
@@ -1085,7 +1087,11 @@
     $('#side-edit').hidden = S.side !== 'edit';
     $('#side-bulk').hidden = S.side !== 'bulk';
     $('#side-pages').hidden = S.side !== 'pages';
-    if (S.side === 'edit') renderEditor(); else if (S.side === 'pages') renderPagesTab(); else renderBulk();
+    $('#side-mods').hidden = S.side !== 'mods';
+    if (S.side === 'edit') renderEditor();
+    else if (S.side === 'pages') renderPagesTab();
+    else if (S.side === 'mods') renderModules();
+    else renderBulk();
     makeAccordion($('#side-' + S.side), S.side);
   }
 
@@ -1093,7 +1099,7 @@
    * Side pane sections as an accordion: clicking a section title opens it and closes the one open before;
    * clicking the open one closes it. General and Scope stay open. The open section per pane is remembered.
    */
-  const ACC_PINNED = ['General', 'Scope'];
+  const ACC_PINNED = ['General', 'Scope', 'Script', 'Add module'];
   const ACC_DEFAULT = { edit: 'Dest 1', bulk: 'Distribute CCs', pages: 'Page library' };
   let openSection;
   try { openSection = Object.assign({}, ACC_DEFAULT, JSON.parse(localStorage.getItem(LS_OPEN) || '{}')); } catch (e) { openSection = Object.assign({}, ACC_DEFAULT); }
@@ -1148,6 +1154,9 @@
     const head = el('div', { class: 'edhead' },
       el('h3', null, 'Encoder ' + (i + 1)),
       sel.length > 1 ? el('span', { class: 'muted' }, sel.length + ' selected, edits only affect encoder ' + (i + 1)) : null);
+    const mod = MOD().moduleAt(MOD().parse(S.scene), S.page, i);
+    const modNote = mod ? el('p', { class: 'muted modnote' }, 'Driven by the module "' + MOD().TYPES[mod.type].label + '". Changes to Dest 1, Dest 2 and Push are overwritten when the module changes. ',
+      el('button', { class: 'btn small', type: 'button', onclick: e => { e.preventDefault(); S.side = 'mods'; render(); } }, 'Open module')) : null;
 
     const general = el('fieldset', null, el('legend', null, 'General'),
       row('Abbr', textEl(enc.abbr, v => commit(() => {
@@ -1174,7 +1183,7 @@
         el('legend', null, M.ROLE_LABEL[role] + (role === 'd2' && M.getAction(enc, 'd1').type === 0 ? ' (inactive, Dest 1 is Off)' : '')),
         actionEditor(role, a, p));
     });
-    pane.replaceChildren(head, general, ...sections);
+    pane.replaceChildren(head, modNote, general, ...sections);
   }
 
   function extraKeys(obj, known) {
@@ -1597,6 +1606,85 @@
         S.scene.pages[x.p].encoders[x.e].color = Math.max(0, Math.min(M.PALETTE.length - 1, v));
       }));
     }, 'Colors set');
+  }
+
+  // ---------- Modules tab: script modules configured with forms ----------
+  const modState = { type: 'shift' };
+  function modChannel(p) { return M.pageChannel(S.scene.pages[p], S.settings); }
+  /* Keeps a module script in step with the scene after any edit (moved encoders, page channels). */
+  function syncModules() {
+    const cfg = S.scene && MOD().parse(S.scene);
+    if (cfg) MOD().build(S.scene, cfg, modChannel);
+  }
+  /* Applies a change to the module configuration and rebuilds script and wiring (one undo step). */
+  function modCommit(fn, msg) {
+    const cfg = MOD().parse(S.scene) || MOD().emptyConfig();
+    // Positions are taken from the wiring before the change, since removing a module renumbers the IDs.
+    MOD().refresh(S.scene, cfg);
+    commit(() => { fn(cfg); MOD().build(S.scene, cfg, modChannel, { relocate: false }); }, msg);
+  }
+  function renderModules() {
+    const pane = $('#side-mods');
+    const Mx = MOD();
+    const cfg = Mx.parse(S.scene);
+    const foreign = Mx.foreignScript(S.scene);
+    const code = (S.scene.code && S.scene.code.code) || '';
+    const bytes = new TextEncoder().encode(code).length;
+    const n = cfg ? cfg.modules.length : 0;
+
+    const status = el('fieldset', null, el('legend', null, 'Script'),
+      foreign
+        ? el('p', { class: 'warn' }, 'This scene has its own script ("' + (S.scene.code.scriptName || 'unnamed') + '"). Adding a module replaces it.')
+        : el('p', { class: 'muted' }, n ? n + (n === 1 ? ' module, ' : ' modules, ') + bytes + ' of ' + Mx.SCRIPT_LIMIT + ' bytes' : 'No modules yet. Modules are ready-made functions for the E16 that run as a Lua script in this scene.'),
+      !foreign && bytes > Mx.SCRIPT_LIMIT ? el('p', { class: 'warn' }, 'The script is too large for the E16. Remove a module.') : null,
+      n ? el('div', { class: 'modbar' }, el('span', { style: { width: Math.min(100, Math.round(bytes / Mx.SCRIPT_LIMIT * 100)) + '%' } })) : null);
+
+    const typeOpts = {};
+    const keys = Object.keys(Mx.TYPES);
+    keys.forEach((k, i) => { typeOpts[i] = { label: Mx.TYPES[k].label, sure: true }; });
+    const t = Mx.TYPES[modState.type];
+    const sel = selected();
+    const target = sel.length ? sel[0] : null;
+    const taken = target !== null && Mx.moduleAt(cfg, S.page, target);
+    const add = el('fieldset', null, el('legend', null, 'Add module'),
+      row('Module', selectEl(typeOpts, keys.indexOf(modState.type), v => { modState.type = keys[v]; render(); })),
+      el('p', { class: 'muted' }, t.desc),
+      row('Encoder', el('span', { class: target === null ? 'hint' : null }, target === null ? 'Select an encoder in the grid' : 'Page ' + (S.page + 1) + ', encoder ' + (target + 1))),
+      taken ? fieldHint('This encoder already has a module.', true) : null,
+      btnRow(actBtn('Add', () => addModule(target), { class: 'btn primary', disabled: target === null || !!taken })));
+
+    const list = cfg ? cfg.modules.map((m, i) => moduleSection(m, i)) : [];
+    pane.replaceChildren(status, add, ...list);
+  }
+  function addModule(enc) {
+    if (enc === null) return;
+    const Mx = MOD();
+    if (Mx.foreignScript(S.scene) && !confirm('Replace the script "' + (S.scene.code.scriptName || 'unnamed') + '" of this scene with knobOx modules?')) return;
+    const m = Mx.create(modState.type, S.scene, S.page, enc);
+    openSection.mods = modTitle(m);
+    modCommit(cfg => { cfg.modules.push(m); }, Mx.TYPES[m.type].label + ' added to P' + (S.page + 1) + ' E' + (enc + 1));
+  }
+  function modTitle(m) { return MOD().TYPES[m.type].label + ' · P' + (m.page + 1) + ' E' + (m.enc + 1); }
+  function moduleSection(m, i) {
+    const t = MOD().TYPES[m.type];
+    const set = (key, v) => modCommit(cfg => { cfg.modules[i][key] = v; });
+    const chOpts = { 0: { label: 'Page (' + modChannel(m.page) + ')', sure: true } };
+    for (let c = 1; c <= 16; c++) chOpts[c] = { label: String(c), sure: true };
+    const rows = t.fields.map(f => {
+      let ctl;
+      if (f.kind === 'channel') ctl = selectEl(chOpts, m[f.key] || 0, v => set(f.key, v));
+      else if (f.kind === 'num') ctl = numEl(m[f.key], v => set(f.key, Math.max(f.min, Math.min(f.max, v))), { min: f.min, max: f.max, class: 'w-num' });
+      else ctl = textEl(m[f.key] || '', v => set(f.key, v.replace(/[^\x20-\x7e]/g, '').slice(0, f.len)), { maxlength: f.len, class: 'w-num' });
+      return row(f.label, ctl, f.hint);
+    });
+    return el('fieldset', null, el('legend', null, modTitle(m)),
+      ...rows,
+      btnRow(
+        actBtn('Show encoder', () => { S.page = m.page; S.sel = new Set([m.enc]); S.anchor = m.enc; render(); }),
+        actBtn('Remove', () => {
+          if (!confirm('Remove "' + modTitle(m) + '"? The encoder\'s Dest 1 and Push are switched Off.')) return;
+          modCommit(cfg => { cfg.modules.splice(i, 1); }, 'Module removed');
+        }, { class: 'btn danger' })));
   }
 
   /* Pages a navigation template is written to: the Page range, otherwise the current Page. */
