@@ -17,11 +17,22 @@
   const MARK = '--@knobox ';
   const ID_BASE = 100, ID_MAX = 199;
   const SCRIPT_LIMIT = 8000;   // upload limit of the OXI App for code.code
-  const SCRIPT_NAME = 'knobox';
+  const SCRIPT_NAME_LEN = 18;  // scriptName field in the scene header
   const VERSION = 1;
 
   /* Printable ASCII only (the E16 font), at most n characters. */
   function label(s, n) { return String(s || '').replace(/[^\x20-\x7e]/g, '').slice(0, n); }
+  /*
+   * Script name for generated code: "kx_<title>_<hash>", at most 18 characters. The hash of the code makes
+   * the name change with every different script, so a name found on the E16 identifies exactly one version
+   * in the script library.
+   */
+  function scriptName(title, code) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < code.length; i++) { h ^= code.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    const slug = String(title || '').replace(/[^A-Za-z0-9]/g, '').slice(0, SCRIPT_NAME_LEN - 10) || 'scene';
+    return 'kx_' + slug + '_' + h.toString(16).padStart(8, '0').slice(0, 6);
+  }
   function luaStr(s) { return '"' + String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; }
   function clamp(v, lo, hi) { v = Math.round(Number(v)); return Number.isNaN(v) ? lo : Math.max(lo, Math.min(hi, v)); }
 
@@ -190,7 +201,7 @@
       '',
       code,
     ].join('\n');
-    scene.code = { code, fullScript: full.replace(/\r?\n/g, '\r\n'), scriptName: SCRIPT_NAME };
+    scene.code = { code, fullScript: full.replace(/\r?\n/g, '\r\n'), scriptName: scriptName(scene.title, code) };
     return { bytes: new TextEncoder().encode(code).length };
   }
 
@@ -204,7 +215,7 @@
     relocate(scene, mods, idsFor({ modules: mods }));
   }
 
-  const api = { refresh, TYPES, MARK, ID_BASE, ID_MAX, SCRIPT_LIMIT, SCRIPT_NAME, parse, foreignScript, emptyConfig, create, build, generate, moduleAt };
+  const api = { refresh, scriptName, TYPES, MARK, ID_BASE, ID_MAX, SCRIPT_LIMIT, parse, foreignScript, emptyConfig, create, build, generate, moduleAt };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.E16Modules = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -445,16 +445,12 @@
         pages.push(await fetchBlock(sess, CMD_PAGE, w, i, 'page ' + (i + 1)));
         if (onProgress) onProgress(i + 2, total);
       }
-      // How the OXI App reads scripts back is not known yet; the E16 does not answer this guessed
-      // request. If it fails, the scene comes back without code and is flagged so that it cannot be
-      // sent back by accident (that would erase the script on the device).
-      let script = null, scriptMissing = false;
-      if (decodeHeader(header).code.scriptName) {
-        try { script = await fetchBlock(sess, CMD_SCRIPT, w, 0, 'script'); }
-        catch (e) { scriptMissing = true; }
-      }
-      const scene = decodeScene(header, pages, script);
-      if (scriptMissing) Object.defineProperty(scene, 'scriptMissing', { value: true, enumerable: false });
+      // The E16 has no known way to read the script block back; the OXI App does not read it either
+      // (it looks the script up by name in its local library). A scene with a script name comes back
+      // without code and is flagged, so that it is not sent back by accident (that would erase the
+      // script on the device) unless the caller finds the script by name.
+      const scene = decodeScene(header, pages, null);
+      if (scene.code.scriptName) Object.defineProperty(scene, 'scriptMissing', { value: true, enumerable: false, writable: true, configurable: true });
       return scene;
     } finally { sess.close(); }
   }

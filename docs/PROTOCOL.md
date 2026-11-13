@@ -79,8 +79,8 @@ u8 0x14 | u16 BE bodyLen | u8 0x00 | body | u32 BE CRC
 ```
 
 - **Slot list:** the OXI App requests the header (`cmd 00`) of slots 0–15 and shows their titles. Empty slots report default titles such as "S. 4".
-- **Download:** header, then pages 0–11. How a script is read back is **not known yet**: the E16 does not answer a `07 04` request. The editor tries it once for scenes with a script name; if there is no answer, the scene is loaded without code and refused for upload, so the script on the device cannot be erased by accident.
-- After a download the OXI App also sent `F0 00 21 5B 02 01 07 52 F7`. Its meaning is unknown; the editor does not send it.
+- **Download:** header, then pages 0–11. **Scripts are not read back.** A capture of OXI App 2.1.0 downloading a scene with a script (once with the script in its local library, once without) shows byte-identical traffic: header and 12 pages, no `cmd 04` request, no script data from the device, and the saved file has an empty `code`. The app shows the script by looking up `scriptName` in its `Scripts` folder. The E16 does not answer a `07 04` request either. knobOx does the same as the app: it keeps a script library on the computer and fills in the code by name; a scene whose script is not found is refused for upload, so the script on the device cannot be erased by accident.
+- After a download the OXI App also sends `F0 00 21 5B 02 01 07 52 F7` and gets no answer; then it reads the headers of all 16 slots again. Its meaning is unknown (possibly "transfer finished"); the editor does not send it.
 
 - **Empty slot / delete:** no delete command is known. An unused slot holds a default scene that is identical for every slot except the scene title (`S. 6`, `S. 16`), the page titles (`P. 1` … `P. 9`, `P.10` … `P.12`) and each page's MIDI channel (1–12); its script block is empty. The editor "deletes" a slot by uploading exactly this scene (`emptyScene()` in `src/sysex.js`, read from slots 6 and 16 of a device).
 

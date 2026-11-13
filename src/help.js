@@ -57,7 +57,9 @@
   <li>Per slot: <b>open</b> in the editor, <b>save</b> to the folder (or download), <b>send</b> the scene that is open in the editor, <b>delete</b>.</li>
   <li><b>Drag and drop:</b> drag a file onto a slot to send it, or a slot onto the file list to save it.</li>
   <li><b>Delete</b> asks first and can save the slot before deleting it. The slot then holds an empty scene ("S. 6" etc.), exactly like a new E16.</li>
-</ul>`,
+</ul>
+<h3>Scenes with a script</h3>
+<p>The E16 keeps a scene's Lua script but cannot hand it back; the OXI App cannot read it either. Both look the script up by its name on the computer instead. knobOx stores every script it saves or sends in the <b>script library</b> (see <a href="#help-files">Files and folders</a>). When you open or save a slot, the script comes from there and the scene is complete. If the script is not in the library, the scene is loaded without it and cannot be sent back, so the script on the E16 is not erased by accident.</p>`,
     },
     {
       id: 'editor', title: 'Pages and encoders',
@@ -168,6 +170,7 @@
   <li>Moving a module encoder (drag and drop, swapping Pages) moves the module with it.</li>
   <li><b>Script</b> at the top shows the script size. The E16 accepts up to 8000 bytes.</li>
   <li>A scene with its own script (e.g. from the OXI App) is replaced when you add a module. knobOx asks first.</li>
+  <li>The script is stored in the script library when you save or send the scene, so a scene read back from the E16 is complete with its modules.</li>
   <li>The encoder settings of a module encoder are written by the module; change them in the Modules tab.</li>
   <li>CCs sent by modules are not shown in the CC overview yet.</li>
 </ul>`,
@@ -201,8 +204,11 @@
   knobOx/
     E16/
       navigation.json      your navigation templates
-      pages/               the Page library, one file per entry</pre>
-<p>These are plain files: you can back them up, sync them between computers or share them with friends. Without a scene folder, templates and Page library entries are kept in the browser and move into the folder once you open one.</p>`,
+      pages/               the Page library, one file per entry
+      scripts/             the script library: the exact code of every script knobOx saved or sent
+  Scripts/                 the OXI App's scripts (.e16script); knobOx adds module scripts here</pre>
+<p>These are plain files: you can back them up, sync them between computers or share them with friends. Without a scene folder, templates, Page library entries and scripts are kept in the browser.</p>
+<p>Scripts are found by the script name stored on the E16. Module scripts get a name with a code fingerprint (e.g. <code>kx_Synth_3f2a91</code>), so every version has its own entry. A script from the OXI App that is only in <code>Scripts/</code> can be shown by the OXI App but not sent by knobOx: send its scene once from its <code>.oxie16</code> file, then it is in the library.</p>`,
     },
     {
       id: 'tips', title: 'Tips for the E16',

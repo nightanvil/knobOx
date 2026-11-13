@@ -10,7 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Modules tab (side panel): ready-made script functions for the E16, set up with a form instead of Lua code. knobOx writes the scene's script, wires the encoders and shows the script size (limit 8000 bytes). Every change is one undo step; module encoders follow when Pages are swapped or encoders moved. The configuration is kept in the scene file, so a saved scene opens with its modules again. A scene with its own script is only replaced after a confirmation.
 - First module, "Shift layer": turning sends CC A, turning while the encoder is pushed sends CC B, each with its own value and an optional label while pushed. Needs Lua API 1.3.
 - Encoder editor: a module encoder shows which module drives it, with a button to open it.
+- Script library: every script knobOx saves or sends is stored by its script name (`knobOx/E16/scripts/` in the scene folder, otherwise in the browser); generated module scripts also go into the OXI App's `Scripts/` folder. Opening or saving a slot takes the script from there, so scenes with scripts come back complete and can be sent again. Module scripts are named `kx_<title>_<fingerprint>`, one name per script version.
 - `test/device/probe.oxie16`: test scene that shows which Lua events and functions arrive on the E16.
+
+### Changed
+
+- Reading a slot no longer sends a guessed script request (the E16 does not answer it, and the OXI App does not read scripts either); scripts come from the script library.
 
 ### Documentation
 

@@ -46,6 +46,10 @@
   const NAV_FILE_OLD = 'knobox-navigation.json';  // location up to v1.2.0, in the folder root
   const PAGES_DIR = ['knobOx', 'E16', 'pages'];
   const PAGES_PATH = 'knobOx/E16/pages';
+  // Script library: exact uploaded code per script name (knobOx), plus the OXI App's own Scripts folder.
+  const SCRIPTS_DIR = ['knobOx', 'E16', 'scripts'];
+  const OXI_SCRIPTS_DIR = ['Scripts'];
+  const LS_SCRIPTS = 'e16ed.scripts';
 
   function loadSettings() {
     try { return Object.assign({}, JSON.parse(localStorage.getItem(LS_SETTINGS) || '{}')); }
@@ -302,6 +306,7 @@
           status.textContent = n === total - 1 ? 'Scene sent, waiting for the script block …' : 'Sending … ' + n + '/' + total;
         });
         bar.value = bar.max;
+        await storeScript(S.scene);
         status.textContent = 'Done: "' + S.scene.title + '" is now in slot ' + slot + '.' + (res.scriptBlockFailed ? ' ' + scriptBlockNote() : '');
         toast('Sent to E16 (slot ' + slot + ')' + (res.scriptBlockFailed ? ', checked by reading it back' : ''));
         if (S.lib.slots) { S.lib.slots[slot - 1] = { slot, title: S.scene.title, color: S.scene.color, scriptName: (S.scene.code || {}).scriptName || '' }; fillSlots(); }
@@ -343,6 +348,7 @@
       if (!confirm('Overwrite ' + S.fileName + ' with the scene in the editor?\n\nUse "Save as …" to save it under a different name.')) return;
       try {
         await L().write(S.fileHandle, text);
+        await storeScript(S.scene);
         markSaved(); toast('Saved ' + S.fileName); refreshFolder();
         return;
       } catch (e) { toast('Could not write ' + S.fileName + ': ' + e.message + (onLinux() ? ' ' + FOLDER_FLATPAK : ''), true); return; }
@@ -619,7 +625,9 @@
     return deviceOp('Reading slots', async midi => { S.lib.slots = await X().listScenes(midi); });
   }
   async function readSlot(slot, report) {
-    return X().readScene(S.midi, slot, report);
+    const scene = await X().readScene(S.midi, slot, report);
+    await restoreScript(scene);
+    return scene;
   }
   function openSlot(slot) {
     if (!confirmDiscard()) return;
@@ -628,12 +636,79 @@
       S.page = 0;
       loadText(JSON.stringify(scene), L().fileNameFor(scene.title), null, false, null,
         { kind: 'device', slot, scriptMissing: !!scene.scriptMissing });
-      toast(scene.scriptMissing ? scriptMissingText(scene) : 'Loaded "' + scene.title + '" from E16 slot ' + slot, scene.scriptMissing);
+      toast(scene.scriptMissing ? scriptMissingText(scene) : 'Loaded "' + scene.title + '" from E16 slot ' + slot
+        + (scene.code.scriptName ? ' (script "' + scene.code.scriptName + '" from the script library)' : ''), scene.scriptMissing);
     });
   }
   function scriptMissingText(scene) {
-    return '"' + scene.title + '" uses the script "' + scene.code.scriptName + '", which cannot be read from the E16 yet. ' +
-      'Pages and settings were loaded; the script itself is missing, so this copy cannot be sent back.';
+    return '"' + scene.title + '" uses the script "' + scene.code.scriptName + '", which is not in the script library. '
+      + 'The E16 cannot hand out scripts, so knobOx looks them up by name (like the OXI App). '
+      + 'Pages and settings were loaded; without the script this copy cannot be sent back.';
+  }
+
+  // ---------- script library ----------
+  /*
+   * The E16 stores a scene's script but cannot send it back. Like the OXI App, knobOx keeps scripts on
+   * the computer and finds them by the script name in the scene header:
+   *   knobOx/E16/scripts/<name>.json  exact uploaded code and full source (any script knobOx saved or sent)
+   *   Scripts/<name>.e16script        the OXI App's library (full source); generated module scripts are
+   *                                   written there too, other scripts only if the file is missing
+   * Without a scene folder, the records are kept in the browser.
+   */
+  function scriptFile(name) { return String(name).replace(/[\\/:*?"<>|]+/g, '_'); }
+  function localScripts() {
+    try { return JSON.parse(localStorage.getItem(LS_SCRIPTS) || '{}') || {}; } catch (e) { return {}; }
+  }
+  /* Stores the scene's script in the library. Errors only produce a warning: the scene itself was saved or sent. */
+  async function storeScript(scene) {
+    const c = scene && scene.code;
+    if (!c || !c.scriptName || !c.code) return;
+    const rec = { format: 'knobox-script', version: 1, name: c.scriptName, code: c.code, fullScript: c.fullScript || '' };
+    try {
+      if (S.lib.dir) {
+        await L().writeFileAt(S.lib.dir, SCRIPTS_DIR, scriptFile(c.scriptName) + '.json', JSON.stringify(rec, null, 2));
+        if (c.fullScript) {
+          const oxiName = scriptFile(c.scriptName) + '.e16script';
+          const ours = !!MOD().parse(scene);
+          if (ours || await L().readFileAt(S.lib.dir, OXI_SCRIPTS_DIR, oxiName) === null) {
+            await L().writeFileAt(S.lib.dir, OXI_SCRIPTS_DIR, oxiName, c.fullScript);
+          }
+        }
+      } else {
+        const all = localScripts();
+        all[c.scriptName] = { code: rec.code, fullScript: rec.fullScript };
+        localStorage.setItem(LS_SCRIPTS, JSON.stringify(all));
+      }
+    } catch (e) { toast('The script "' + c.scriptName + '" could not be stored in the script library: ' + e.message, true); }
+  }
+  /*
+   * Fills in the script of a scene read from the E16 from the library. Generated module scripts can also be
+   * rebuilt from the OXI App's Scripts folder; the name (with its code hash) must match exactly.
+   * Returns true when the scene is complete.
+   */
+  async function restoreScript(scene) {
+    const name = scene.code && scene.code.scriptName;
+    if (!scene.scriptMissing || !name) return !scene.scriptMissing;
+    let rec = null;
+    if (S.lib.dir) {
+      const text = await L().readFileAt(S.lib.dir, SCRIPTS_DIR, scriptFile(name) + '.json');
+      try { rec = text && JSON.parse(text); } catch (e) { rec = null; }
+      if (!rec || !rec.code) {
+        const full = await L().readFileAt(S.lib.dir, OXI_SCRIPTS_DIR, scriptFile(name) + '.e16script');
+        const cfg = full && MOD().parse({ code: { fullScript: full } });
+        if (cfg) {
+          const copy = M.deepClone(scene);
+          MOD().build(copy, cfg, p => M.pageChannel(copy.pages[p], S.settings), { relocate: false });
+          if (copy.code.scriptName === name) rec = copy.code;
+        }
+      }
+    }
+    if (!rec || !rec.code) rec = localScripts()[name] || null;
+    if (!rec || !rec.code) return false;
+    scene.code.code = rec.code;
+    scene.code.fullScript = rec.fullScript || '';
+    scene.scriptMissing = false;
+    return true;
   }
 
   /*
@@ -648,14 +723,15 @@
       let old = null;
       try { old = JSON.parse(await L().read(existing.handle)); } catch (e) { /* unreadable: plain overwrite */ }
       const keepScript = scriptMissing && old && old.code && old.code.code && old.code.scriptName === scene.code.scriptName;
-      const w = scriptMissing && !keepScript ? '\n\nWarning: the script cannot be read from the E16, the saved file will not contain it.' : '';
+      const w = scriptMissing && !keepScript ? '\n\nWarning: the script is not in the script library, the saved file will not contain it.' : '';
       if (!confirm(name + ' already exists. Overwrite it with ' + label + '?' + (keepScript ? '\n\nThe script "' + scene.code.scriptName + '" from the existing file is kept.' : '') + w)) return null;
       if (keepScript) { scene.code.code = old.code.code; scene.code.fullScript = old.code.fullScript || ''; note = ' (script kept from the existing file)'; }
       else if (scriptMissing) { note = ' – without its script'; warn = true; }
     } else if (scriptMissing) {
-      note = ' – without its script, which cannot be read from the E16 yet'; warn = true;
+      note = ' – without its script, which is not in the script library'; warn = true;
     }
     const handle = await L().save(S.lib.dir, name, JSON.stringify(scene));
+    await storeScript(scene);
     return { handle, note, warn };
   }
 
@@ -691,7 +767,7 @@
     showDialog([
       el('h2', null, 'Delete slot ' + slot + '?'),
       el('p', null, '"' + title + '" will be removed from the E16. The slot becomes empty ("S. ' + slot + '"). This cannot be undone on the device.'),
-      cur && cur.scriptName ? el('p', { class: 'muted' }, 'Note: the script "' + cur.scriptName + '" cannot be read from the E16 yet, so a saved copy will not contain it.') : null,
+      cur && cur.scriptName ? el('p', { class: 'muted' }, 'Note: the E16 cannot hand out scripts. If the script "' + cur.scriptName + '" is not in the script library, the saved copy will not contain it.') : null,
       el('div', { class: 'dlgactions' },
         el('button', { class: 'btn primary', type: 'button', onclick: () => { close(); deleteSlot(slot, true); } }, 'Save ' + where + ', then delete'),
         el('button', { class: 'btn danger', type: 'button', onclick: () => { close(); deleteSlot(slot, false); } }, 'Delete without saving'),
@@ -771,6 +847,7 @@
     if (!confirm('Send "' + label + '" to slot ' + slot + (cur ? ' (replaces "' + cur.title + '")' : '') + '?')) return;
     return deviceOp('Sending to slot ' + slot, async (midi, report) => {
       const res = await X().uploadScene(scene, slot, midi, report);
+      await storeScript(scene);
       if (S.lib.slots) S.lib.slots[slot - 1] = { slot, title: scene.title, color: scene.color, scriptName: (scene.code || {}).scriptName || '' };
       toast('Saved "' + scene.title + '" to E16 slot ' + slot + (res.scriptBlockFailed ? '. ' + scriptBlockNote() : ''), !!res.scriptBlockFailed);
       return true;
@@ -934,7 +1011,7 @@
       el('b', { class: 'srctitle' }, S.scene.title || '(untitled)'),
       el('span', { class: 'muted' }, text),
       S.dirty ? el('span', { class: 'badge warn' }, 'unsaved changes') : null,
-      S.source && S.source.scriptMissing ? el('span', { class: 'badge warn', title: 'The script cannot be read from the E16 yet' }, 'script not loaded') : null,
+      S.source && S.source.scriptMissing ? el('span', { class: 'badge warn', title: 'The script is not in the script library, so this copy cannot be sent back' }, 'script not loaded') : null,
     ].filter(Boolean));
   }
 
@@ -948,7 +1025,7 @@
     $('#btnSaveAs').disabled = !has;
     setTip($('#btnSaveAs'), 'Save as …: ' + (S.lib.dir ? 'into the scene folder under a new name' : 'under a new name') + ' (Ctrl+Shift+S)');
     $('#btnSaveDevice').disabled = !has || !!src.scriptMissing;
-    setTip($('#btnSaveDevice'), 'Save to E16 …: ' + (src.scriptMissing ? 'disabled, the script of this scene could not be read from the E16'
+    setTip($('#btnSaveDevice'), 'Save to E16 …: ' + (src.scriptMissing ? 'disabled, the script of this scene is not in the script library'
       : src.kind === 'device' ? 'choose a slot (slot ' + src.slot + ' preselected) and send the scene' : 'choose a slot and send the scene'));
     $('#btnClose').disabled = !has;
     setTip($('#btnLibrary'), S.view === 'library' && S.scene ? 'Back to editor' : 'Library');
