@@ -2,7 +2,7 @@
 
 **knobOx** is an unofficial, browser-based editor for **OXI E16** scenes (`.oxie16`). It also sends scenes to the E16 and reads them back over USB. Everything runs in your browser: nothing to install, nothing is uploaded anywhere.
 
-**Open it here: <https://knobox.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave)
+**Open it here: <https://nightanvil.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave)
 
 The built-in help (**?** button in the top bar) explains the whole app.
 
@@ -37,14 +37,33 @@ Then open <http://localhost:8716>.
 
 ## Linux notes
 
-- **Sending scenes:** the default ALSA MIDI buffer (4 KB) is too small for the script block at the end of every upload. Scenes without a script still arrive (knobOx reads them back to check). For scenes with a script, enlarge the buffer and reload knobOx:
+- **Sending scenes:** the default ALSA MIDI buffer (4 KB) is too small for the script block at the end of every upload. Scenes without a script still arrive (knobOx reads them back to check). For scenes with a script, enlarge the buffer once:
 
-  ```bash
-  sudo sh -c 'echo 32768 > /sys/module/snd_seq_midi/parameters/output_buffer_size'
-  echo 'options snd-seq-midi output_buffer_size=32768' | sudo tee /etc/modprobe.d/snd-seq-midi.conf
-  ```
+  1. Store the setting. It applies every time the kernel module `snd_seq_midi` is loaded, also after a reboot:
 
-  The second line keeps the setting after a reboot.
+     ```bash
+     echo 'options snd-seq-midi output_buffer_size=32768' | sudo tee /etc/modprobe.d/snd-seq-midi.conf
+     ```
+
+  2. Activate it now. If the E16 is **not** connected, the module is usually not loaded yet; load it (or simply plug in the E16):
+
+     ```bash
+     sudo modprobe snd-seq-midi
+     ```
+
+     If the E16 **was** already connected, the module runs with the old value; set it directly:
+
+     ```bash
+     sudo sh -c 'echo 32768 > /sys/module/snd_seq_midi/parameters/output_buffer_size'
+     ```
+
+     "No such file or directory" here means the module is not loaded: use `modprobe` as above.
+
+  3. Check it (must print `32768`), then reload knobOx:
+
+     ```bash
+     cat /sys/module/snd_seq_midi/parameters/output_buffer_size
+     ```
 - **Flatpak browsers** (Brave or Chromium from Flathub) don't see the E16 and only a few folders. Allow both, then restart the browser:
 
   ```bash
@@ -75,6 +94,10 @@ docs/               protocol and file format
 test/               browser tests with USB capture fixtures
 CHANGELOG.md        release notes
 ```
+
+## Support
+
+knobOx is free and stays free. If it saved you some clicking, you can buy me a coffee on [Ko-fi](https://ko-fi.com/nightanvil).
 
 ## License
 

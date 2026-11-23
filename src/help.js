@@ -209,10 +209,18 @@
   <li>Linux with a Flatpak browser: give the browser access to the folder; knobOx shows the command.</li>
 </ul>
 <h3>Sending to the E16 fails on Linux</h3>
-<p>The default MIDI buffer on Linux is too small for the last part of a scene (the script block). Scenes without a script still arrive; knobOx checks this and reports it. For scenes with a script, enlarge the buffer in a terminal and reload knobOx:</p>
-<pre>sudo sh -c 'echo 32768 > /sys/module/snd_seq_midi/parameters/output_buffer_size'</pre>
-<p>To keep the setting after a reboot:</p>
-<pre>echo 'options snd-seq-midi output_buffer_size=32768' | sudo tee /etc/modprobe.d/snd-seq-midi.conf</pre>`,
+<p>The default MIDI buffer on Linux is too small for the last part of a scene (the script block). Scenes without a script still arrive; knobOx checks this and reports it. For scenes with a script, enlarge the buffer once in a terminal:</p>
+<ol>
+  <li>Store the setting. It applies every time the kernel module <code>snd_seq_midi</code> is loaded, also after a reboot:
+    <pre>echo 'options snd-seq-midi output_buffer_size=32768' | sudo tee /etc/modprobe.d/snd-seq-midi.conf</pre></li>
+  <li>Activate it now. With the E16 <b>not</b> connected, the module is usually not loaded yet; load it (or plug in the E16):
+    <pre>sudo modprobe snd-seq-midi</pre>
+    With the E16 <b>already</b> connected, the module runs with the old value; set it directly:
+    <pre>sudo sh -c 'echo 32768 > /sys/module/snd_seq_midi/parameters/output_buffer_size'</pre>
+    "No such file or directory" means the module is not loaded: use <code>modprobe</code> instead.</li>
+  <li>Check it (must show 32768), then reload knobOx:
+    <pre>cat /sys/module/snd_seq_midi/parameters/output_buffer_size</pre></li>
+</ol>`,
     },
     {
       id: 'format', title: 'About and file format',
@@ -224,7 +232,8 @@
   <li><b>Not verified:</b> Push behavior "Press + Release", the raw navigation options, instrument and parameter.</li>
   <li>Unknown fields and values are always saved unchanged. An untouched file is saved byte for byte as it was.</li>
 </ul>
-<p>Source code, protocol description and bug reports: <a href="https://github.com/knobOx/knobOx" target="_blank" rel="noopener">github.com/knobOx/knobOx</a>.</p>`,
+<p>Source code, protocol description and bug reports: <a href="https://github.com/nightanvil/knobOx" target="_blank" rel="noopener noreferrer">github.com/nightanvil/knobOx</a>.</p>
+<p>Questions, ideas or feedback: <a href="https://github.com/nightanvil/knobOx/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>. knobOx is free; if it helps you, you can support it on <a href="https://ko-fi.com/nightanvil" target="_blank" rel="noopener noreferrer">Ko-fi</a>.</p>`,
     },
   ];
 

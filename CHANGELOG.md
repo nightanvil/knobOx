@@ -5,6 +5,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The project moved to the GitHub organization nightanvil. knobOx now runs at <https://nightanvil.github.io/knobOx/>, the repository is <https://github.com/nightanvil/knobOx>. Links to the old address no longer work.
+
+### Added
+
+- Ko-fi link: a cup icon next to the GitHub link in the top bar, a line at the end of the help and a "Support" section in the README.
+
+### Documentation
+
+- Linux MIDI buffer: README and help explain the steps in a safe order (store the setting, load the module or set the value, check it) and what "No such file or directory" means.
+
 ## [1.3.1] - 2026-11-13
 
 ### Added
@@ -163,11 +175,11 @@ First public release.
 - USB-MIDI protocol description in `docs/PROTOCOL.md`, browser test page with capture fixtures.
 - GitHub link in the app header.
 
-[Unreleased]: https://github.com/knobOx/knobOx/compare/v1.3.1...HEAD
-[1.3.1]: https://github.com/knobOx/knobOx/compare/v1.3.0...v1.3.1
-[1.3.0]: https://github.com/knobOx/knobOx/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/knobOx/knobOx/compare/v1.1.2...v1.2.0
-[1.1.2]: https://github.com/knobOx/knobOx/compare/v1.1.1...v1.1.2
-[1.1.1]: https://github.com/knobOx/knobOx/compare/v1.0.1...v1.1.1
-[1.0.1]: https://github.com/knobOx/knobOx/compare/v1.0...v1.0.1
-[1.0]: https://github.com/knobOx/knobOx/releases/tag/v1.0
+[Unreleased]: https://github.com/nightanvil/knobOx/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/nightanvil/knobOx/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/nightanvil/knobOx/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/nightanvil/knobOx/compare/v1.1.2...v1.2.0
+[1.1.2]: https://github.com/nightanvil/knobOx/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/nightanvil/knobOx/compare/v1.0.1...v1.1.1
+[1.0.1]: https://github.com/nightanvil/knobOx/compare/v1.0...v1.0.1
+[1.0]: https://github.com/nightanvil/knobOx/releases/tag/v1.0
