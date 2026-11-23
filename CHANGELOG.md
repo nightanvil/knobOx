@@ -12,7 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Encoder editor: a module encoder shows which module drives it, with a button to open it.
 - Script library: every script knobOx saves or sends is stored by its script name (`knobOx/E16/scripts/` in the scene folder, otherwise in the browser); generated module scripts also go into the OXI App's `Scripts/` folder. Opening or saving a slot takes the script from there, so scenes with scripts come back complete and can be sent again. Module scripts are named `kx_<title>_<fingerprint>`, one name per script version.
 - `test/device/probe.oxie16`: test scene that shows which Lua events and functions arrive on the E16.
-- Ko-fi link: a cup icon next to the GitHub link in the top bar, a line at the end of the help and a "Support" section in the README.
+- Ko-fi link: the Ko-fi cup icon next to the GitHub link in the top bar, a line at the end of the help and in the README intro.
 
 ### Changed
 
