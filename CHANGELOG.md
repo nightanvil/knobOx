@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Ko-fi link: a cup icon next to the GitHub link in the top bar, a line at the end of the help and a "Support" section in the README.
+- Ko-fi link: the Ko-fi cup icon next to the GitHub link in the top bar, a line at the end of the help and in the README intro.
 
 ### Documentation
 

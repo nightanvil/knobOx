@@ -6,6 +6,8 @@
 
 The built-in help (**?** button in the top bar) explains the whole app.
 
+knobOx is free and stays free. If it saved you some clicking, you can buy me a coffee on [Ko-fi](https://ko-fi.com/nightanvil).
+
 ## Why
 
 - There is no OXI App for Linux. knobOx runs in any Chromium-based browser and talks to the E16 directly.
@@ -94,10 +96,6 @@ docs/               protocol and file format
 test/               browser tests with USB capture fixtures
 CHANGELOG.md        release notes
 ```
-
-## Support
-
-knobOx is free and stays free. If it saved you some clicking, you can buy me a coffee on [Ko-fi](https://ko-fi.com/nightanvil).
 
 ## License
 
