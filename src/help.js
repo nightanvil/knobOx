@@ -260,7 +260,8 @@
   <li><b>Not verified:</b> Push behavior "Press + Release", the raw navigation options, instrument and parameter.</li>
   <li>Unknown fields and values are always saved unchanged. An untouched file is saved byte for byte as it was.</li>
 </ul>
-<p>Source code, protocol description and bug reports: <a href="https://github.com/knobOx/knobOx" target="_blank" rel="noopener">github.com/knobOx/knobOx</a>.</p>`,
+<p>Source code, protocol description and bug reports: <a href="https://github.com/nightanvil/knobOx" target="_blank" rel="noopener noreferrer">github.com/nightanvil/knobOx</a>.</p>
+<p>Questions, ideas or feedback: <a href="https://github.com/nightanvil/knobOx/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>. knobOx is free; if it helps you, you can support it on <a href="https://ko-fi.com/nightanvil" target="_blank" rel="noopener noreferrer">Ko-fi</a>.</p>`,
     },
   ];
 

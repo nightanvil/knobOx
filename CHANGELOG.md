@@ -12,10 +12,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Encoder editor: a module encoder shows which module drives it, with a button to open it.
 - Script library: every script knobOx saves or sends is stored by its script name (`knobOx/E16/scripts/` in the scene folder, otherwise in the browser); generated module scripts also go into the OXI App's `Scripts/` folder. Opening or saving a slot takes the script from there, so scenes with scripts come back complete and can be sent again. Module scripts are named `kx_<title>_<fingerprint>`, one name per script version.
 - `test/device/probe.oxie16`: test scene that shows which Lua events and functions arrive on the E16.
+- Ko-fi link: a cup icon next to the GitHub link in the top bar, a line at the end of the help and a "Support" section in the README.
 
 ### Changed
 
 - Reading a slot no longer sends a guessed script request (the E16 does not answer it, and the OXI App does not read scripts either); scripts come from the script library.
+- The project moved to the GitHub organization nightanvil. knobOx now runs at <https://nightanvil.github.io/knobOx/>, the repository is <https://github.com/nightanvil/knobOx>. Links to the old address no longer work.
 
 ### Documentation
 
@@ -179,11 +181,11 @@ First public release.
 - USB-MIDI protocol description in `docs/PROTOCOL.md`, browser test page with capture fixtures.
 - GitHub link in the app header.
 
-[Unreleased]: https://github.com/knobOx/knobOx/compare/v1.3.1...HEAD
-[1.3.1]: https://github.com/knobOx/knobOx/compare/v1.3.0...v1.3.1
-[1.3.0]: https://github.com/knobOx/knobOx/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/knobOx/knobOx/compare/v1.1.2...v1.2.0
-[1.1.2]: https://github.com/knobOx/knobOx/compare/v1.1.1...v1.1.2
-[1.1.1]: https://github.com/knobOx/knobOx/compare/v1.0.1...v1.1.1
-[1.0.1]: https://github.com/knobOx/knobOx/compare/v1.0...v1.0.1
-[1.0]: https://github.com/knobOx/knobOx/releases/tag/v1.0
+[Unreleased]: https://github.com/nightanvil/knobOx/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/nightanvil/knobOx/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/nightanvil/knobOx/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/nightanvil/knobOx/compare/v1.1.2...v1.2.0
+[1.1.2]: https://github.com/nightanvil/knobOx/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/nightanvil/knobOx/compare/v1.0.1...v1.1.1
+[1.0.1]: https://github.com/nightanvil/knobOx/compare/v1.0...v1.0.1
+[1.0]: https://github.com/nightanvil/knobOx/releases/tag/v1.0

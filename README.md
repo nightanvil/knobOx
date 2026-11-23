@@ -2,7 +2,7 @@
 
 **knobOx** is an unofficial, browser-based editor for **OXI E16** scenes (`.oxie16`). It also sends scenes to the E16 and reads them back over USB. Everything runs in your browser: nothing to install, nothing is uploaded anywhere.
 
-**Open it here: <https://knobox.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave)
+**Open it here: <https://nightanvil.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave)
 
 The built-in help (**?** button in the top bar) explains the whole app.
 
@@ -95,6 +95,10 @@ docs/               protocol and file format
 test/               browser tests with USB capture fixtures
 CHANGELOG.md        release notes
 ```
+
+## Support
+
+knobOx is free and stays free. If it saved you some clicking, you can buy me a coffee on [Ko-fi](https://ko-fi.com/nightanvil).
 
 ## License
 
