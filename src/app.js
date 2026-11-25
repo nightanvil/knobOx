@@ -296,19 +296,29 @@
     const btnGo = el('button', { class: 'btn primary', type: 'button', disabled: true }, 'Send');
     const btnSyx = el('button', { class: 'btn', type: 'button', disabled: problems.length > 0 }, 'Save as .syx');
 
+    /* Fill the port list; a port the user picked stays selected while it exists. Returns the number of outputs. */
     function fillPorts() {
       const access = S.midi.access;
       const outs = X.portList(access.outputs);
       const best = S.midi.output;
-      portSel.replaceChildren(...(outs.length ? outs.map(p => el('option', { value: p.id, selected: best && p.id === best.id }, p.name)) : [el('option', null, 'no MIDI outputs')]));
+      const keep = outs.find(p => p.id === portSel.value) || best;
+      portSel.replaceChildren(...(outs.length ? outs.map(p => el('option', { value: p.id, selected: keep && p.id === keep.id }, p.name)) : [el('option', null, 'no MIDI outputs')]));
       portSel.disabled = !outs.length;
       btnGo.disabled = !best || problems.length > 0;
       status.textContent = best ? 'Connected to "' + best.name + '".' : notFoundMsg();
+      // Once connected, the button only reads the port list again.
+      btnConnect.textContent = 'Refresh ports';
+      btnConnect.title = 'Read the list of MIDI ports again (e.g. after plugging in a device). To use another port, just pick it in the list.';
       if (best) loadSlotNames();
+      return outs.length;
     }
     btnConnect.addEventListener('click', async () => {
+      const wasConnected = !!S.midi;
+      if (window.E16Diag) window.E16Diag.log('app', (wasConnected ? 'Refresh ports' : 'Connect') + ' button');
       try { await connectMidi(); } catch (e) { status.textContent = e.message; }
-      if (S.midi) fillPorts();
+      if (!S.midi) return;
+      const n = fillPorts();
+      if (wasConnected) status.textContent += ' Port list refreshed: ' + n + (n === 1 ? ' MIDI output' : ' MIDI outputs') + '.';
     });
     if (S.midi) fillPorts();
     btnGo.addEventListener('click', async () => {
