@@ -294,38 +294,34 @@
       catch (e) { status.textContent = 'Could not read the slot names: ' + transferError(e); }
       finally { S.lib.busy = false; }
     }
-    const portSel = el('select', { disabled: true }, el('option', null, '– not connected yet –'));
+    // The E16 answers SysEx only on its first port, which findPorts picks; there is nothing to choose.
+    const portInfo = el('span', { class: 'hint' }, 'not connected yet');
     const status = el('p', { class: 'muted' }, problems.length ? problems.join(' ') : 'Ready. The OXI App must be closed.');
     const bar = el('progress', { max: 14, value: 0, class: 'sendbar' });
     const btnConnect = el('button', { class: 'btn', type: 'button' }, 'Connect');
     const btnGo = el('button', { class: 'btn primary', type: 'button', disabled: true }, 'Send');
     const btnSyx = el('button', { class: 'btn', type: 'button', disabled: problems.length > 0 }, 'Save as .syx');
 
-    /* Fill the port list; a port the user picked stays selected while it exists. Returns the number of outputs. */
-    function fillPorts() {
-      const access = S.midi.access;
-      const outs = X.portList(access.outputs);
+    /* Show the E16 port found automatically. */
+    function showPort() {
       const best = S.midi.output;
-      const keep = outs.find(p => p.id === portSel.value) || best;
-      portSel.replaceChildren(...(outs.length ? outs.map(p => el('option', { value: p.id, selected: keep && p.id === keep.id }, p.name)) : [el('option', null, 'no MIDI outputs')]));
-      portSel.disabled = !outs.length;
+      portInfo.textContent = best ? best.name : 'no E16 found';
       btnGo.disabled = !best || problems.length > 0;
       status.textContent = best ? 'Connected to "' + best.name + '".' : notFoundMsg();
-      // Once connected, the button only reads the port list again.
+      // Once connected, the button only looks for the E16 again.
       btnConnect.textContent = 'Refresh ports';
-      btnConnect.title = 'Read the list of MIDI ports again (e.g. after plugging in a device). To use another port, just pick it in the list.';
+      btnConnect.title = 'Look for the E16 again, e.g. after plugging it in.';
       if (best) loadSlotNames();
-      return outs.length;
     }
     btnConnect.addEventListener('click', async () => {
       const wasConnected = !!S.midi;
       if (window.E16Diag) window.E16Diag.log('app', (wasConnected ? 'Refresh ports' : 'Connect') + ' button');
       try { await connectMidi(); } catch (e) { status.textContent = e.message; }
       if (!S.midi) return;
-      const n = fillPorts();
-      if (wasConnected) status.textContent += ' Port list refreshed: ' + n + (n === 1 ? ' MIDI output' : ' MIDI outputs') + '.';
+      showPort();
+      if (wasConnected && S.midi.output) status.textContent += ' Ports refreshed.';
     });
-    if (S.midi) fillPorts();
+    if (S.midi) showPort();
     btnGo.addEventListener('click', async () => {
       if (window.E16Diag) window.E16Diag.log('app', 'Send button (slot ' + slotSel.value + ')');
       if (S.lib.busy) { status.textContent = 'The E16 is busy, please wait.'; return; }
@@ -336,10 +332,10 @@
       if (!(await askConfirm('Overwrite slot ' + slot + (cur ? ' ("' + cur.title + '")' : '') + ' on the E16 with "' + title + '"?', 'Send'))) return;
       if (title !== S.scene.title) commit(() => { S.scene.title = title; }, 'Scene renamed to "' + title + '"');
       S.settings.lastSlot = slot; saveSettings();
-      const access = S.midi.access;
-      const output = X.portList(access.outputs).find(o => o.id === portSel.value);
-      // Matching input: same name, or the E16 input found automatically.
-      const input = X.portList(access.inputs).find(i => i.name === output.name) || X.findPorts(access).input;
+      updatePorts();
+      const { input, output } = S.midi;
+      portInfo.textContent = output ? output.name : 'no E16 found';
+      if (!output || !input) { status.textContent = notFoundMsg(); return; }
       if (window.E16Diag) window.E16Diag.log('app', 'Send to slot ' + slot + ' via "' + (output && output.name) + '" / "' + (input && input.name) + '"');
       bar.max = X.encodeScene(S.scene, slot).length; bar.value = 0;
       btnGo.disabled = btnConnect.disabled = true;
@@ -373,7 +369,7 @@
       el('p', null, 'Transfers the scene over USB-MIDI, like the OXI App. The selected slot is overwritten.'),
       row('Slot', slotSel),
       row('Scene name', nameIn, 'Renames the scene before sending'),
-      row('MIDI port', portSel),
+      row('MIDI port', portInfo),
       el('div', { class: 'inl' }, btnConnect, btnGo, btnSyx),
       bar, status,
       el('p', { class: 'muted' }, 'Linux without a browser: save as .syx and send it e.g. with amidi -p hw:X -s file.syx -i 100.'),
