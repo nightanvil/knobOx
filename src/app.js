@@ -108,6 +108,7 @@
     return n;
   }
   function toast(msg, isErr) {
+    if (isErr && window.E16Diag) window.E16Diag.log('toast', msg);
     const t = $('#toast');
     t.textContent = msg;
     t.className = 'toast' + (isErr ? ' err' : '');
@@ -271,7 +272,7 @@
 
     function fillPorts() {
       const access = S.midi.access;
-      const outs = [...access.outputs.values()];
+      const outs = X.portList(access.outputs);
       const best = S.midi.output;
       portSel.replaceChildren(...(outs.length ? outs.map(p => el('option', { value: p.id, selected: best && p.id === best.id }, p.name)) : [el('option', null, 'no MIDI outputs')]));
       portSel.disabled = !outs.length;
@@ -294,9 +295,10 @@
       if (title !== S.scene.title) commit(() => { S.scene.title = title; }, 'Scene renamed to "' + title + '"');
       S.settings.lastSlot = slot; saveSettings();
       const access = S.midi.access;
-      const output = access.outputs.get(portSel.value);
+      const output = X.portList(access.outputs).find(o => o.id === portSel.value);
       // Matching input: same name, or the E16 input found automatically.
-      const input = [...access.inputs.values()].find(i => i.name === output.name) || X.findPorts(access).input;
+      const input = X.portList(access.inputs).find(i => i.name === output.name) || X.findPorts(access).input;
+      if (window.E16Diag) window.E16Diag.log('app', 'Send to slot ' + slot + ' via "' + (output && output.name) + '" / "' + (input && input.name) + '"');
       bar.max = X.encodeScene(S.scene, slot).length; bar.value = 0;
       btnGo.disabled = btnConnect.disabled = true;
       status.textContent = 'Sending …';
@@ -312,6 +314,7 @@
         if (S.lib.slots) { S.lib.slots[slot - 1] = { slot, title: S.scene.title, color: S.scene.color, scriptName: (S.scene.code || {}).scriptName || '' }; fillSlots(); }
         if (S.source && S.source.kind === 'device' && S.source.slot === slot) markSaved();
       } catch (e) {
+        if (window.E16Diag) window.E16Diag.log('error', e);
         status.textContent = 'Error: ' + transferError(e);
       } finally {
         btnGo.disabled = btnConnect.disabled = false;
@@ -442,7 +445,10 @@
     if (!S.midi) {
       const access = await X.midiAccess();
       S.midi = { access };
-      access.onstatechange = () => { updatePorts(); renderLibrary(); };
+      access.onstatechange = ev => {
+        if (window.E16Diag) window.E16Diag.log('midi', 'statechange' + (ev && ev.port ? ': "' + ev.port.name + '" ' + ev.port.type + ' ' + ev.port.state + '/' + ev.port.connection : ''));
+        updatePorts(); renderLibrary();
+      };
     }
     updatePorts();
     if (!S.midi.output) throw new Error(notFoundMsg());
@@ -458,10 +464,12 @@
   async function deviceOp(label, fn) {
     if (S.lib.busy) { toast('The E16 is busy, please wait.', true); return; }
     S.lib.busy = true; S.lib.status = label + ' …'; renderLibrary();
+    if (window.E16Diag) window.E16Diag.log('app', label);
     try {
       const midi = await connectMidi();
       return await fn(midi, (n, total) => { S.lib.status = label + ' … ' + n + '/' + total; renderLibrary(); });
     } catch (e) {
+      if (window.E16Diag) window.E16Diag.log('error', e);
       toast(transferError(e), true);
     } finally {
       S.lib.busy = false; S.lib.status = ''; renderLibrary();
@@ -2186,6 +2194,45 @@
     $('#dlg').showModal();
   }
 
+  // ---------- diagnostic log ----------
+  function showDiagLog() {
+    const D = window.E16Diag;
+    const area = el('textarea', { class: 'diaglog', readonly: true, spellcheck: 'false' });
+    const refresh = () => { area.value = D.text(); area.scrollTop = area.scrollHeight; };
+    refresh();
+    const fileName = () => 'knobox-log-' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.txt';
+    const copy = async () => {
+      refresh();
+      try { await navigator.clipboard.writeText(area.value); toast('Log copied'); }
+      catch (e) { area.focus(); area.select(); try { document.execCommand('copy'); toast('Log copied'); } catch (e2) { toast('Select the text and copy it by hand.', true); } }
+    };
+    const share = async () => {
+      refresh();
+      const text = area.value;
+      try {
+        const file = typeof File === 'function' ? new File([text], fileName(), { type: 'text/plain' }) : null;
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: 'knobOx log' });
+        else await navigator.share({ title: 'knobOx log', text });
+      } catch (e) { if (e.name !== 'AbortError') toast('Sharing failed: ' + e.message, true); }
+    };
+    const download = () => {
+      refresh();
+      const a = el('a', { href: URL.createObjectURL(new Blob([area.value], { type: 'text/plain' })), download: fileName() });
+      document.body.append(a); a.click(); a.remove();
+    };
+    showDialog([
+      el('h2', null, 'Diagnostic log'),
+      el('p', { class: 'muted' }, 'MIDI traffic and errors since the page was loaded. It stays in this browser tab; nothing is sent anywhere. Reproduce the problem, then copy, share or download the log and send it along with your report.'),
+      area,
+      el('div', { class: 'dlgactions' },
+        el('button', { class: 'btn primary', type: 'button', onclick: copy }, 'Copy'),
+        navigator.share ? el('button', { class: 'btn', type: 'button', onclick: share }, 'Share …') : null,
+        el('button', { class: 'btn', type: 'button', onclick: download }, 'Download'),
+        el('button', { class: 'btn', type: 'button', onclick: refresh }, 'Refresh'),
+        el('button', { class: 'btn', type: 'button', onclick: () => { D.clear(); refresh(); } }, 'Clear')),
+    ]);
+  }
+
   // ---------- help overlay: index on the left, text on the right ----------
   let helpEl = null, helpSpy = null;
   function buildHelp() {
@@ -2210,7 +2257,9 @@
     const box = el('div', { class: 'helpbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'knobOx help' },
       el('header', { class: 'helphead' }, el('img', { src: 'assets/icon.svg', alt: '', class: 'logo' }),
         el('b', null, 'knobOx help'), el('span', { class: 'muted' }, $('#appVersion') ? $('#appVersion').textContent : ''),
-        el('span', { class: 'grow' }), close),
+        el('span', { class: 'grow' }),
+        el('button', { class: 'btn small', type: 'button', title: 'Show the diagnostic log (MIDI traffic and errors) to copy or share it', onclick: showDiagLog }, 'Diagnostic log'),
+        close),
       el('div', { class: 'helpcols' }, nav, body));
     helpEl = el('div', { class: 'helpov', hidden: true, onclick: e => { if (e.target === helpEl) closeHelp(); } }, box);
     document.body.append(helpEl);
@@ -2260,7 +2309,7 @@
    * Compare the cached copy of every app file with the server's copy and offer a reload when they differ.
    * The revalidating request also refreshes the cache, so a normal reload then gets the new files.
    */
-  const APP_FILES = ['src/app.js', 'src/model.js', 'src/sysex.js', 'src/library.js', 'src/help.js', 'src/style.css'];
+  const APP_FILES = ['src/app.js', 'src/diag.js', 'src/model.js', 'src/sysex.js', 'src/library.js', 'src/help.js', 'src/style.css'];
   const UPDATE_RECHECK_MS = 5 * 60 * 1000;
   let lastUpdateCheck = 0;
   async function checkForUpdate() {

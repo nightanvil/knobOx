@@ -225,6 +225,8 @@
       html: `
 <h3>Old version after an update</h3>
 <p>The browser caches knobOx. It checks for a newer version on start and offers a reload. If something still looks old: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> (Mac: <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>).</p>
+<h3>Reporting a problem</h3>
+<p>knobOx keeps a diagnostic log of the MIDI traffic and of all errors since the page was loaded. It stays in the browser tab and is never sent anywhere. Reproduce the problem, open the help and press <b>Diagnostic log</b> at the top, then copy, share or download the text and attach it to your report. This also works on phones and tablets without developer tools.</p>
 <h3>"No E16 found"</h3>
 <ul>
   <li>Use Chrome, Chromium, Edge or Brave, and allow MIDI access when the browser asks.</li>
