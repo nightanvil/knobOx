@@ -300,19 +300,67 @@
 
   // ---------- Web MIDI ----------
 
+  function dlog(cat, msg, detail) { if (root.E16Diag) root.E16Diag.log(cat, msg, detail); }
+  function dbytes(b) { return root.E16Diag ? root.E16Diag.bytes(b) : (b ? b.length + ' B' : String(b)); }
+
+  /*
+   * Ports of a MIDIInputMap/MIDIOutputMap as an array. Some iOS apps that add Web MIDI provide
+   * maps whose values() result is not iterable, so forEach and plain iterators are tried as well.
+   */
+  function portList(map) {
+    if (!map) return [];
+    const out = [];
+    try {
+      if (typeof map.forEach === 'function') { map.forEach(p => { if (p && typeof p === 'object') out.push(p); }); return out; }
+    } catch (e) { dlog('midi', 'portList forEach failed:', e); out.length = 0; }
+    try {
+      const it = typeof map.values === 'function' ? map.values() : null;
+      if (it && typeof it.next === 'function') {
+        for (let r = it.next(); !r.done; r = it.next()) out.push(r.value);
+        return out;
+      }
+      if (Array.isArray(it)) return it.slice();
+    } catch (e) { dlog('midi', 'portList values failed:', e); out.length = 0; }
+    Object.keys(map).forEach(k => { const p = map[k]; if (p && typeof p === 'object' && 'name' in p) out.push(p); });
+    return out;
+  }
+
+  function describeMap(map) {
+    if (!map) return String(map);
+    let iter = '?';
+    try { iter = typeof map.values === 'function' ? typeof (map.values() || {})[Symbol.iterator] : 'no values()'; } catch (e) { iter = 'values() threw'; }
+    return (map.constructor && map.constructor.name) + ', size ' + map.size + ', forEach ' + typeof map.forEach + ', values()[Symbol.iterator] ' + iter;
+  }
+
   async function midiAccess() {
+    dlog('midi', 'requestMIDIAccess: secure ' + root.isSecureContext + ', API ' + (root.navigator ? typeof navigator.requestMIDIAccess : 'no navigator'));
     if (root.isSecureContext === false) throw new Error('Web MIDI needs a secure context. Open the editor via http://localhost or http://127.0.0.1 (not 0.0.0.0 or a LAN address) or via https.');
     if (!root.navigator || !navigator.requestMIDIAccess) throw new Error('This browser has no Web MIDI support (use Chrome, Chromium or Edge).');
-    return navigator.requestMIDIAccess({ sysex: true });
+    let access;
+    try { access = await navigator.requestMIDIAccess({ sysex: true }); }
+    catch (e) { dlog('midi', 'requestMIDIAccess failed:', e); throw e; }
+    dlog('midi', 'Access granted, sysexEnabled ' + access.sysexEnabled);
+    dlog('midi', 'inputs: ' + describeMap(access.inputs));
+    dlog('midi', 'outputs: ' + describeMap(access.outputs));
+    logPorts(access);
+    return access;
+  }
+
+  function logPorts(access) {
+    const d = p => '"' + p.name + '" id ' + p.id + ', ' + p.manufacturer + ', ' + p.state + '/' + p.connection;
+    portList(access.inputs).forEach(p => dlog('midi', '  in  ' + d(p)));
+    portList(access.outputs).forEach(p => dlog('midi', '  out ' + d(p)));
   }
 
   /* Pick the E16's first port pair ("OXI E16", not MIDIIN2/MIDIOUT2 or port 2/3 on Linux). */
   function findPorts(access) {
     const pick = map => {
-      const list = [...map.values()].filter(p => /OXI E16/i.test(p.name || ''));
+      const list = portList(map).filter(p => /OXI E16/i.test(p.name || ''));
       return list.find(p => !/MIDI(IN|OUT)\s*\d/i.test(p.name) && !/MIDI [23]\b/.test(p.name)) || list[0] || null;
     };
-    return { input: pick(access.inputs), output: pick(access.outputs) };
+    const res = { input: pick(access.inputs), output: pick(access.outputs) };
+    dlog('midi', 'findPorts: in ' + (res.input ? '"' + res.input.name + '"' : 'none') + ', out ' + (res.output ? '"' + res.output.name + '"' : 'none'));
+    return res;
   }
 
   function isAck(d) { return d.length === ACK.length && ACK.every((v, i) => d[i] === v); }
@@ -327,7 +375,10 @@
     if (!input) throw new Error('E16 input not found (needed for replies).');
     let waiter = null, buf = null;
     const onMsg = ev => {
-      for (const b of ev.data) {
+      const d = ev.data || [];
+      dlog('rx', dbytes(d));
+      for (let i = 0; i < d.length; i++) {
+        const b = d[i];
         if (b === 0xF0) buf = [b];
         else if (buf) {
           buf.push(b);
@@ -338,9 +389,20 @@
         }
       }
     };
-    input.addEventListener('midimessage', onMsg);
+    if (typeof input.addEventListener === 'function') input.addEventListener('midimessage', onMsg);
+    else input.onmidimessage = onMsg;
+    // Plain arrays: every Web MIDI implementation accepts them, some iOS bridges do not handle typed arrays.
+    const send = msg => {
+      dlog('tx', dbytes(msg));
+      try { output.send(Array.from(msg)); }
+      catch (e) { dlog('tx', 'send failed:', e); throw e; }
+    };
     return {
-      async open() { await input.open(); await output.open(); },
+      async open() {
+        dlog('midi', 'open in "' + input.name + '" (' + input.connection + '), out "' + output.name + '" (' + output.connection + ')');
+        if (typeof input.open === 'function') await input.open();
+        if (typeof output.open === 'function') await output.open();
+      },
       exchange(msg, label) {
         // Large blocks (the 8 KB script block) take longer to transfer and store, so the wait grows with the size.
         const wait = (timeoutMs || 3000) + Math.round(msg.length / 4);
@@ -349,19 +411,25 @@
             waiter = null;
             const err = new Error('No reply from the E16 (' + label + ', ' + msg.length + ' bytes, waited ' + (wait / 1000).toFixed(1) + ' s).');
             err.timeout = true; err.size = msg.length;
+            dlog('midi', 'timeout: ' + err.message);
             reject(err);
           }, wait) };
-          output.send(msg);
+          dlog('midi', 'exchange ' + label);
+          send(msg);
         });
       },
       /* Send msg and wait briefly for any reply, ignoring the outcome. */
       async poke(msg) {
         try { await new Promise((resolve, reject) => {
           waiter = { resolve, timer: setTimeout(() => { waiter = null; reject(new Error('no reply')); }, 1500) };
-          output.send(msg);
+          dlog('midi', 'poke');
+          send(msg);
         }); } catch (e) { /* nothing to do */ }
       },
-      close() { input.removeEventListener('midimessage', onMsg); },
+      close() {
+        if (typeof input.removeEventListener === 'function') input.removeEventListener('midimessage', onMsg);
+        else if (input.onmidimessage === onMsg) input.onmidimessage = null;
+      },
     };
   }
 
@@ -379,7 +447,7 @@
           e.index = i;
           throw e;
         }
-        if (!isAck(reply)) throw new Error('Unexpected reply: ' + hex(reply));
+        if (!isAck(reply)) { dlog('midi', 'not an ACK: ' + hex(reply)); throw new Error('Unexpected reply: ' + hex(reply)); }
         if (onProgress) onProgress(i + 1, msgs.length);
       }
     } finally { sess.close(); }
@@ -477,7 +545,7 @@
 
   const api = {
     SLOTS, stm32Crc, pack7, unpack7, encodeScene, decodeScene, checkScene, parseResponse, request,
-    toSyx, splitSyx, emptyScene, midiAccess, findPorts, sendScene, uploadScene, verifyBlocks, readScene, listScenes, isAck, ACK,
+    toSyx, splitSyx, emptyScene, midiAccess, findPorts, portList, sendScene, uploadScene, verifyBlocks, readScene, listScenes, isAck, ACK,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.E16Sysex = api;

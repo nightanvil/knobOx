@@ -11,7 +11,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Diagnostic log: the help overlay has a "Diagnostic log" button. It shows the MIDI traffic and all errors since the page was loaded, to copy, share (on phones and tablets) or download for a bug report. The log stays in the browser tab and is never sent anywhere.
 - Ko-fi link: the Ko-fi cup icon next to the GitHub link in the top bar, a line at the end of the help and in the README intro.
+
+### Fixed
+
+- iOS apps with Web MIDI (e.g. Web MIDI Browser): connecting and sending failed with "Spread syntax requires ...iterable[Symbol.iterator] to be a function". MIDI ports are now listed in a way that also works with these apps, and messages are sent as plain arrays.
 
 ### Documentation
 
