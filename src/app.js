@@ -236,7 +236,38 @@
     r.onload = () => { S.page = 0; loadText(r.result, file.name); };
     r.readAsText(file);
   }
-  function confirmDiscard() { return !S.dirty || confirm('Discard unsaved changes?'); }
+  async function confirmDiscard() { return !S.dirty || askConfirm('Discard unsaved changes?', 'Discard'); }
+
+  /*
+   * In-page replacements for confirm() and prompt(). Some iOS apps with Web MIDI (e.g. MIDIWeb) do not
+   * show the browser's own dialogs and answer them with "cancel" at once. askConfirm resolves true/false,
+   * askText the entered text or null.
+   */
+  function askDialog(message, value, okLabel) {
+    return new Promise(resolve => {
+      const field = value === undefined ? null : el('input', { type: 'text', class: 'askinput', value, spellcheck: 'false' });
+      const ok = el('button', { class: 'btn primary', type: 'submit' }, okLabel || 'OK');
+      const dlg = el('dialog', { class: 'askdlg' });
+      let result = field ? null : false;
+      const done = v => { result = v; dlg.close(); };
+      dlg.append(el('form', { method: 'dialog', onsubmit: e => { e.preventDefault(); done(field ? field.value : true); } },
+        ...String(message).split('\n\n').map(t => el('p', null, t)),
+        field,
+        el('div', { class: 'dlgactions askbtns' },
+          el('button', { class: 'btn', type: 'button', onclick: () => done(field ? null : false) }, 'Cancel'),
+          ok)));
+      dlg.addEventListener('close', () => {
+        dlg.remove();
+        if (window.E16Diag) window.E16Diag.log('ask', String(message).split('\n')[0].slice(0, 90) + ' -> ' + JSON.stringify(result));
+        resolve(result);
+      });
+      document.body.append(dlg);
+      dlg.showModal();
+      if (field) { field.focus(); field.select(); } else ok.focus();
+    });
+  }
+  function askConfirm(message, okLabel) { return askDialog(message, undefined, okLabel); }
+  function askText(message, value) { return askDialog(message, value === undefined || value === null ? '' : String(value)); }
   // ---------- send to device (Web MIDI SysEx, see docs/PROTOCOL.md) ----------
   function sendDialog() {
     const X = window.E16Sysex;
@@ -281,12 +312,13 @@
     });
     if (S.midi) fillPorts();
     btnGo.addEventListener('click', async () => {
+      if (window.E16Diag) window.E16Diag.log('app', 'Send button (slot ' + slotSel.value + ')');
       if (S.lib.busy) { status.textContent = 'The E16 is busy, please wait.'; return; }
       const slot = Number(slotSel.value);
       const cur = S.lib.slots && S.lib.slots[slot - 1];
       const title = nameIn.value.trim().slice(0, 7);
       if (!title) { status.textContent = 'Enter a scene name.'; return; }
-      if (!confirm('Overwrite slot ' + slot + (cur ? ' ("' + cur.title + '")' : '') + ' on the E16 with "' + title + '"?')) return;
+      if (!(await askConfirm('Overwrite slot ' + slot + (cur ? ' ("' + cur.title + '")' : '') + ' on the E16 with "' + title + '"?', 'Send'))) return;
       if (title !== S.scene.title) commit(() => { S.scene.title = title; }, 'Scene renamed to "' + title + '"');
       S.settings.lastSlot = slot; saveSettings();
       const access = S.midi.access;
@@ -342,7 +374,7 @@
     if (!S.scene) return;
     const text = JSON.stringify(S.scene);
     if (S.fileHandle) {
-      if (!confirm('Overwrite ' + S.fileName + ' with the scene in the editor?\n\nUse "Save as …" to save it under a different name.')) return;
+      if (!(await askConfirm('Overwrite ' + S.fileName + ' with the scene in the editor?\n\nUse "Save as …" to save it under a different name.', 'Overwrite'))) return;
       try {
         await L().write(S.fileHandle, text);
         markSaved(); toast('Saved ' + S.fileName); refreshFolder();
@@ -368,7 +400,7 @@
    */
   async function saveAs() {
     if (!S.scene) return;
-    let name = prompt('Save as (file name):', S.fileName || L().fileNameFor(S.scene.title));
+    let name = await askText('Save as (file name):', S.fileName || L().fileNameFor(S.scene.title));
     if (name === null) return;
     name = name.trim().replace(/[\\/:*?"<>|]/g, '_');
     if (!name) return toast('No file name given', true);
@@ -408,8 +440,8 @@
   }
 
   /* Close the scene and go back to the library. */
-  function closeScene() {
-    if (!S.scene || !confirmDiscard()) return;
+  async function closeScene() {
+    if (!S.scene || !(await confirmDiscard())) return;
     S.scene = null; S.original = null; S.fileHandle = null; S.source = null;
     S.dirty = false; S.undo = []; S.redo = []; S.sel = new Set();
     S.view = 'library';
@@ -611,7 +643,7 @@
     } catch (e) { if (e.name !== 'AbortError') toast(e.message + (onLinux() ? ' ' + FOLDER_FLATPAK : ''), true); }
   }
   async function openFromFolder(f) {
-    if (!confirmDiscard()) return;
+    if (!(await confirmDiscard())) return;
     S.page = 0;
     loadText(await L().read(f.handle), f.name, null, false, f.handle);
   }
@@ -627,8 +659,8 @@
   async function readSlot(slot, report) {
     return X().readScene(S.midi, slot, report);
   }
-  function openSlot(slot) {
-    if (!confirmDiscard()) return;
+  async function openSlot(slot) {
+    if (!(await confirmDiscard())) return;
     return deviceOp('Reading slot ' + slot, async (midi, report) => {
       const scene = await readSlot(slot, report);
       S.page = 0;
@@ -655,7 +687,7 @@
       try { old = JSON.parse(await L().read(existing.handle)); } catch (e) { /* unreadable: plain overwrite */ }
       const keepScript = scriptMissing && old && old.code && old.code.code && old.code.scriptName === scene.code.scriptName;
       const w = scriptMissing && !keepScript ? '\n\nWarning: the script cannot be read from the E16, the saved file will not contain it.' : '';
-      if (!confirm(name + ' already exists. Overwrite it with ' + label + '?' + (keepScript ? '\n\nThe script "' + scene.code.scriptName + '" from the existing file is kept.' : '') + w)) return null;
+      if (!(await askConfirm(name + ' already exists. Overwrite it with ' + label + '?' + (keepScript ? '\n\nThe script "' + scene.code.scriptName + '" from the existing file is kept.' : '') + w, 'Overwrite'))) return null;
       if (keepScript) { scene.code.code = old.code.code; scene.code.fullScript = old.code.fullScript || ''; note = ' (script kept from the existing file)'; }
       else if (scriptMissing) { note = ' – without its script'; warn = true; }
     } else if (scriptMissing) {
@@ -770,11 +802,12 @@
     render();
   }
 
-  function sendToSlot(scene, slot, label) {
+  async function sendToSlot(scene, slot, label) {
+    if (window.E16Diag) window.E16Diag.log('app', 'Send "' + label + '" to slot ' + slot);
     const problems = X().checkScene(scene);
     if (problems.length) { toast(problems.join(' '), true); return; }
     const cur = S.lib.slots && S.lib.slots[slot - 1];
-    if (!confirm('Send "' + label + '" to slot ' + slot + (cur ? ' (replaces "' + cur.title + '")' : '') + '?')) return;
+    if (!(await askConfirm('Send "' + label + '" to slot ' + slot + (cur ? ' (replaces "' + cur.title + '")' : '') + '?', 'Send'))) return;
     return deviceOp('Sending to slot ' + slot, async (midi, report) => {
       const res = await X().uploadScene(scene, slot, midi, report);
       if (S.lib.slots) S.lib.slots[slot - 1] = { slot, title: scene.title, color: scene.color, scriptName: (scene.code || {}).scriptName || '' };
@@ -1668,12 +1701,12 @@
   async function navFromCurrent() {
     const draft = M.navFromPage(S.scene, S.page, '');
     if (!draft) return toast('Page ' + (S.page + 1) + ' has no Navigation pushes', true);
-    const name = (prompt('Template name (' + M.navTemplateText(draft) + '):', curPage().title || 'Navigation') || '').trim();
+    const name = ((await askText('Template name (' + M.navTemplateText(draft) + '):', curPage().title || 'Navigation')) || '').trim();
     if (!name) return;
     draft.name = name;
     const i = S.nav.list.findIndex(t => t.name === name);
     if (i >= 0) {
-      if (!confirm('Replace the template "' + name + '"?')) return;
+      if (!(await askConfirm('Replace the template "' + name + '"?', 'Replace'))) return;
       S.nav.list[i] = draft;
       S.nav.sel = i + 1;
     } else {
@@ -1686,7 +1719,7 @@
   }
   async function navDelete() {
     const t = S.nav.list[S.nav.sel - 1];
-    if (!t || !confirm('Delete the template "' + t.name + '"?')) return;
+    if (!t || !(await askConfirm('Delete the template "' + t.name + '"?', 'Delete'))) return;
     S.nav.list.splice(S.nav.sel - 1, 1);
     S.nav.sel = 0;
     await saveNav();
@@ -1740,8 +1773,8 @@
   }
   async function libSave(pages) {
     const titles = pages.map(p => S.scene.pages[p].title).filter(Boolean);
-    const name = (prompt('Name for ' + pages.length + (pages.length === 1 ? ' Page' : ' Pages') + ':',
-      (S.scene.title ? S.scene.title + ' ' : '') + (titles[0] || 'P' + (pages[0] + 1))) || '').trim();
+    const name = ((await askText('Name for ' + pages.length + (pages.length === 1 ? ' Page' : ' Pages') + ':',
+      (S.scene.title ? S.scene.title + ' ' : '') + (titles[0] || 'P' + (pages[0] + 1)))) || '').trim();
     if (!name) return;
     const entry = M.pagesToEntry(S.scene, pages[0], pages.length, name);
     if (await libStore(entry)) toast('"' + name + '" saved (' + pages.length + (pages.length === 1 ? ' Page)' : ' Pages)'));
@@ -1750,7 +1783,7 @@
   async function libStore(entry) {
     const file = pageFileName(entry.name);
     const i = S.plib.entries.findIndex(x => x.file.toLowerCase() === file.toLowerCase());
-    if (i >= 0 && !confirm('"' + S.plib.entries[i].entry.name + '" already exists. Replace it?')) return false;
+    if (i >= 0 && !(await askConfirm('"' + S.plib.entries[i].entry.name + '" already exists. Replace it?', 'Replace'))) return false;
     if (S.plib.inFolder) {
       try { await L().writeFileAt(S.lib.dir, PAGES_DIR, file, JSON.stringify(entry, null, 2)); }
       catch (e) { toast('Could not write ' + PAGES_PATH + '/' + file + ': ' + e.message, true); return false; }
@@ -1765,14 +1798,14 @@
   async function libClone() {
     const x = S.plib.entries[S.plib.sel];
     if (!x) return;
-    const name = (prompt('Name for the copy of "' + x.entry.name + '":', x.entry.name + ' copy') || '').trim();
+    const name = ((await askText('Name for the copy of "' + x.entry.name + '":', x.entry.name + ' copy')) || '').trim();
     if (!name) return;
     if (pageFileName(name).toLowerCase() === x.file.toLowerCase()) return toast('Choose a different name', true);
     const entry = M.deepClone(x.entry);
     entry.name = name;
     if (await libStore(entry)) toast('"' + x.entry.name + '" cloned as "' + name + '"');
   }
-  function libInsert() {
+  async function libInsert() {
     const x = S.plib.entries[S.plib.sel];
     if (!x) return;
     const at = S.plib.at - 1, n = x.entry.pages.length;
@@ -1780,7 +1813,7 @@
       return toast('"' + x.entry.name + '" has ' + n + ' Pages and does not fit from Page ' + (at + 1) + '. Last possible start: Page ' + (S.scene.pages.length - n + 1) + '.', true);
     }
     const range = n === 1 ? 'Page ' + (at + 1) : 'Pages ' + (at + 1) + '–' + (at + n);
-    if (!confirm('Overwrite ' + range + ' with "' + x.entry.name + '"?')) return;
+    if (!(await askConfirm('Overwrite ' + range + ' with "' + x.entry.name + '"?', 'Overwrite'))) return;
     let res;
     commit(() => { res = M.insertPages(S.scene, x.entry, at); });
     S.page = at;
@@ -1792,7 +1825,7 @@
   }
   async function libDelete() {
     const x = S.plib.entries[S.plib.sel];
-    if (!x || !confirm('Delete "' + x.entry.name + '" from the library?' + (S.plib.inFolder ? ' The file ' + PAGES_PATH + '/' + x.file + ' is removed.' : ''))) return;
+    if (!x || !(await askConfirm('Delete "' + x.entry.name + '" from the library?' + (S.plib.inFolder ? ' The file ' + PAGES_PATH + '/' + x.file + ' is removed.' : ''), 'Delete'))) return;
     if (S.plib.inFolder) {
       try { await L().removeFileAt(S.lib.dir, PAGES_DIR, x.file); }
       catch (e) { return toast('Could not delete ' + x.file + ': ' + e.message, true); }
@@ -2171,7 +2204,7 @@
   function wire() {
     const openLbl = $('#fileInput').closest('label');
     openLbl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#fileInput').click(); } });
-    $('#fileInput').addEventListener('change', e => { const f = e.target.files[0]; if (f && confirmDiscard()) openFile(f); e.target.value = ''; });
+    $('#fileInput').addEventListener('change', async e => { const f = e.target.files[0]; e.target.value = ''; if (f && await confirmDiscard()) openFile(f); });
     $('#btnLibrary').addEventListener('click', () => showView(S.view === 'library' ? 'editor' : 'library'));
     $('#libPick').addEventListener('click', pickFolder);
     $('#libRefresh').addEventListener('click', refreshFolder);
@@ -2196,12 +2229,13 @@
     const dz = document.body;
     dz.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); document.body.classList.add('filedrag'); } });
     dz.addEventListener('dragleave', e => { if (e.target === document.body || e.clientX === 0) document.body.classList.remove('filedrag'); });
-    dz.addEventListener('drop', e => {
+    dz.addEventListener('drop', async e => {
       document.body.classList.remove('filedrag');
       if (!e.dataTransfer.files.length) return;
       e.preventDefault();
-      if (!confirmDiscard()) return;
-      openFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];  // the drop data is gone once the handler yields
+      if (!(await confirmDiscard())) return;
+      openFile(file);
     });
 
     document.addEventListener('keydown', e => {

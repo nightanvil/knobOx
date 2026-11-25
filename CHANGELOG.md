@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - iOS apps with Web MIDI (e.g. Web MIDI Browser): connecting and sending failed with "Spread syntax requires ...iterable[Symbol.iterator] to be a function". MIDI ports are now listed in a way that also works with these apps, and messages are sent as plain arrays.
+- iOS apps with Web MIDI: Send, Save as, Discard and all other questions did nothing, because these apps do not show the browser's own confirmation and input boxes. knobOx now asks with its own dialogs.
 
 ### Documentation
 
