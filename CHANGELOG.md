@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Send to E16 dialog: once connected, the Connect button is called "Refresh ports" and reports how many MIDI outputs it found. A port picked in the list stays selected when the list is refreshed.
 - Reading a slot no longer sends a guessed script request (the E16 does not answer it, and the OXI App does not read scripts either); scripts come from the script library.
 - The project moved to the GitHub organization nightanvil. knobOx now runs at <https://nightanvil.github.io/knobOx/>, the repository is <https://github.com/nightanvil/knobOx>. Links to the old address no longer work.
 
