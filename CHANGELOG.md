@@ -5,19 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Changed
-
-- Send to E16 dialog: once connected, the Connect button is called "Refresh ports" and reports how many MIDI outputs it found. A port picked in the list stays selected when the list is refreshed.
-- The project moved to the GitHub organization nightanvil. knobOx now runs at <https://nightanvil.github.io/knobOx/>, the repository is <https://github.com/nightanvil/knobOx>. Links to the old address no longer work.
+## [1.3.2] - 2026-11-25
 
 ### Added
 
 - Diagnostic log: the help overlay has a "Diagnostic log" button. It shows the MIDI traffic and all errors since the page was loaded, to copy, share (on phones and tablets) or download for a bug report. The log stays in the browser tab and is never sent anywhere.
 - Ko-fi link: the Ko-fi cup icon next to the GitHub link in the top bar, a line at the end of the help and in the README intro.
 
+### Changed
+
+- Send to E16 dialog: no port selection any more. knobOx always sends over the E16 port that answers (the first one) and shows its name. Once connected, the Connect button is called "Refresh ports" and looks for the E16 again.
+- The project moved to the GitHub organization nightanvil. knobOx now runs at <https://nightanvil.github.io/knobOx/>, the repository is <https://github.com/nightanvil/knobOx>. Links to the old address no longer work.
+
 ### Fixed
 
-- iOS apps with Web MIDI (e.g. Web MIDI Browser): connecting and sending failed with "Spread syntax requires ...iterable[Symbol.iterator] to be a function". MIDI ports are now listed in a way that also works with these apps, and messages are sent as plain arrays.
+- iOS apps with Web MIDI (e.g. MIDIWeb Browser): connecting and sending failed with "Spread syntax requires ...iterable[Symbol.iterator] to be a function". MIDI ports are now listed in a way that also works with these apps, and messages are sent as plain arrays.
 - iOS apps with Web MIDI: Send, Save as, Discard and all other questions did nothing, because these apps do not show the browser's own confirmation and input boxes. knobOx now asks with its own dialogs.
 
 ### Documentation
@@ -182,7 +184,8 @@ First public release.
 - USB-MIDI protocol description in `docs/PROTOCOL.md`, browser test page with capture fixtures.
 - GitHub link in the app header.
 
-[Unreleased]: https://github.com/nightanvil/knobOx/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/nightanvil/knobOx/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/nightanvil/knobOx/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/nightanvil/knobOx/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/nightanvil/knobOx/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/nightanvil/knobOx/compare/v1.1.2...v1.2.0
