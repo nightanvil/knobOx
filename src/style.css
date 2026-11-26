@@ -151,7 +151,10 @@ input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
 .libslot { width: 20px; text-align: right; color: var(--muted); font-size: 12px; }
 .libcolor { width: 4px; height: 22px; border-radius: 2px; flex: none; }
 .libname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.libhint { margin: 10px 2px; }
+.libhint { margin: 10px 2px; max-width: 900px; }
+.libhint h3 { margin: 12px 0 2px; font-size: 13px; font-weight: 600; color: var(--text); }
+.libhint h3:first-child { margin-top: 0; }
+.libhint p { margin: 0; }
 .pad { padding: 12px; }
 
 /* What is being edited and where it comes from */

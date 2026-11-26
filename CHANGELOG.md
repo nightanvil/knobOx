@@ -17,6 +17,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - Reading a slot no longer sends a guessed script request (the E16 does not answer it, and the OXI App does not read scripts either); scripts come from the script library.
 
+### Documentation
+
+- Library: the hint below the lists has short sections for how it works, Linux, iPad and iPhone (MIDIWeb Browser app) and Android. Help and README name the browsers for phones and tablets.
+
 ## [1.3.2] - 2026-11-25
 
 ### Added
