@@ -68,7 +68,16 @@
         <div class="liblist" id="libDevice"></div>
       </div>
     </div>
-    <p class="muted libhint">Drag a scene onto a device slot to send it, or a slot onto the computer list to save it. You can also drop an <code>.oxie16</code> file anywhere to open it. The OXI App must be closed while the editor talks to the E16.</p>
+    <div class="muted libhint">
+      <h3>How it works</h3>
+      <p>Drag a scene onto a device slot to send it, or a slot onto the computer list to save it. You can also drop an <code>.oxie16</code> file anywhere to open it. The OXI App must be closed while knobOx talks to the E16.</p>
+      <h3>Linux</h3>
+      <p>Scenes with a script need a larger MIDI buffer, and Flatpak browsers need access to USB devices and your scene folder. knobOx shows the commands when needed; step by step: help (?), Troubleshooting.</p>
+      <h3>iPad and iPhone</h3>
+      <p>Safari has no Web MIDI. Open knobOx in the <a href="https://midiweb.app/" target="_blank" rel="noopener">MIDIWeb Browser</a> app. The scene folder is not available there: open and save single files instead.</p>
+      <h3>Android</h3>
+      <p>Chrome works as on the desktop, with the E16 connected over USB.</p>
+    </div>
     <button class="btn" id="btnRestore" hidden>Restore last session</button>
   </section>
 

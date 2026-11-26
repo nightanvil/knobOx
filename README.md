@@ -2,7 +2,7 @@
 
 **knobOx** is an unofficial, browser-based editor for **OXI E16** scenes (`.oxie16`). It also sends scenes to the E16 and reads them back over USB. Everything runs in your browser: nothing to install, nothing is uploaded anywhere.
 
-**Open it here: <https://nightanvil.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave)
+**Open it here: <https://nightanvil.github.io/knobOx/>** (Chrome, Chromium, Edge or Brave; on Android Chrome, on iPad and iPhone the [MIDIWeb Browser](https://midiweb.app/) app)
 
 The built-in help (**?** button in the top bar) explains the whole app.
 

@@ -14,6 +14,7 @@
 <h3>What you need</h3>
 <ul>
   <li><b>Chrome, Chromium, Edge or Brave.</b> Firefox and Safari can open and save files, but cannot talk to the E16 and cannot use a scene folder.</li>
+  <li><b>iPad and iPhone:</b> the <a href="https://midiweb.app/" target="_blank" rel="noopener">MIDIWeb Browser</a> app (Safari has no Web MIDI). Without a scene folder: open and save single files. <b>Android:</b> Chrome.</li>
   <li>The E16 connected over <b>USB</b>.</li>
   <li><b>Close the OXI App</b> while knobOx talks to the E16. Only one program can use the MIDI port at a time.</li>
 </ul>

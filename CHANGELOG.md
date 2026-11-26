@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Documentation
+
+- Library: the hint below the lists has short sections for how it works, Linux, iPad and iPhone (MIDIWeb Browser app) and Android. Help and README name the browsers for phones and tablets.
+
 ## [1.3.2] - 2026-11-25
 
 ### Added
